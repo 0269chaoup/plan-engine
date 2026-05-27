@@ -15,6 +15,14 @@ import {
   regenerateIndex,
 } from "../lib/plan.js";
 
+/** Get vault root from parent command options */
+function getVaultRoot(cmd: Command): string {
+  // cmd is the subcommand (e.g., plan create)
+  // cmd.parent is the plan command
+  // cmd.parent.parent is the program command with --vault option
+  return cmd.parent?.parent?.opts()?.vault ?? process.env.OBSIDIAN_VAULT ?? process.cwd();
+}
+
 export function planCommand(): Command {
   const plan = new Command("plan")
     .description("Manage living plan documents — persistent, versioned, searchable");
@@ -29,8 +37,8 @@ export function planCommand(): Command {
     .option("--goals <text>", "Goals section content")
     .option("--design <text>", "Design section content")
     .option("--step <step>", "Add implementation step (repeatable)", (val: string, prev: string[]) => [...prev, val], [] as string[])
-    .action((title, opts) => {
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+    .action((title, opts, cmd) => {
+      const vaultRoot = getVaultRoot(cmd);
 
       const result = createPlan(vaultRoot, title, {
         domain: opts.domain,
@@ -52,8 +60,8 @@ export function planCommand(): Command {
     .command("show")
     .description("Show plan details")
     .argument("<title>", "Plan title (fuzzy match)")
-    .action((title) => {
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+    .action((title, opts, cmd) => {
+      const vaultRoot = getVaultRoot(cmd);
       const plan = findPlan(vaultRoot, title);
 
       if (!plan) {
@@ -80,8 +88,8 @@ export function planCommand(): Command {
     .description("List all plan documents")
     .option("-s, --status <status>", "Filter by status (draft|active|completed|archived)")
     .option("-d, --domain <domain>", "Filter by domain")
-    .action(async (opts) => {
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+    .action(async (opts, cmd) => {
+      const vaultRoot = getVaultRoot(cmd);
       const plans = await listPlans(vaultRoot, {
         status: opts.status,
         domain: opts.domain,
@@ -117,13 +125,13 @@ export function planCommand(): Command {
     .argument("<title>", "Plan title (fuzzy match)")
     .option("-s, --section <name>", "Section to update (e.g., '方案设计')")
     .option("-c, --content <text>", "New content for the section")
-    .action((title, opts) => {
+    .action((title, opts, cmd) => {
       if (!opts.section || !opts.content) {
         console.log("\n❌ Both --section and --content are required.");
         return;
       }
 
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+      const vaultRoot = getVaultRoot(cmd);
       const result = updatePlanSection(vaultRoot, title, opts.section, opts.content);
 
       if (result.updated) {
@@ -139,8 +147,8 @@ export function planCommand(): Command {
     .description("Add a changelog entry to a plan")
     .argument("<title>", "Plan title (fuzzy match)")
     .argument("<change>", "Description of the change")
-    .action((title, change) => {
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+    .action((title, change, opts, cmd) => {
+      const vaultRoot = getVaultRoot(cmd);
       const result = addChangelog(vaultRoot, title, change);
 
       if (result.updated) {
@@ -156,14 +164,14 @@ export function planCommand(): Command {
     .description("Update plan status")
     .argument("<title>", "Plan title (fuzzy match)")
     .argument("<new-status>", "New status (draft|active|completed|archived)")
-    .action((title, newStatus) => {
+    .action((title, newStatus, opts, cmd) => {
       const validStatuses = ["draft", "active", "completed", "archived"];
       if (!validStatuses.includes(newStatus)) {
         console.log(`\n❌ Invalid status. Must be one of: ${validStatuses.join(", ")}`);
         return;
       }
 
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+      const vaultRoot = getVaultRoot(cmd);
       const result = updatePlanStatus(vaultRoot, title, newStatus);
 
       if (result.updated) {
@@ -178,8 +186,8 @@ export function planCommand(): Command {
     .command("search")
     .description("Search plans by keyword")
     .argument("<query>", "Search query")
-    .action(async (query) => {
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+    .action(async (query, opts, cmd) => {
+      const vaultRoot = getVaultRoot(cmd);
       const results = await searchPlans(vaultRoot, query);
 
       if (results.length === 0) {
@@ -208,8 +216,8 @@ export function planCommand(): Command {
   plan
     .command("index")
     .description("Regenerate INDEX.md for all plans")
-    .action(async () => {
-      const vaultRoot = process.env.OBSIDIAN_VAULT ?? process.cwd();
+    .action(async (opts, cmd) => {
+      const vaultRoot = getVaultRoot(cmd);
       const indexPath = await regenerateIndex(vaultRoot);
       console.log(`\n✅ Regenerated: ${indexPath}`);
     });
