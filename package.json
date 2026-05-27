@@ -1,0 +1,24 @@
+{
+  "name": "plan-engine",
+  "version": "1.0.0",
+  "description": "Living document engine for architecture plans and technical strategies — persistent, versioned, searchable",
+  "type": "module",
+  "bin": { "plan-engine": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "gray-matter": "^4.0.3",
+    "glob": "^10.3.0",
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.10.0",
+    "vitest": "^1.0.0"
+  }
+}
