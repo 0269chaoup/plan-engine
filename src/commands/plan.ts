@@ -1,5 +1,15 @@
 /**
- * plan.ts — CLI commands for plan management
+ * plan.ts — CLI 命令定义模块：方案文档管理命令组
+ *
+ * 注册 `plan` 子命令及其所有子命令，包括：
+ *   plan create   — 创建新方案文档
+ *   plan show     — 查看方案详情
+ *   plan list     — 列出所有方案
+ *   plan update   — 更新方案章节内容
+ *   plan changelog — 添加变更记录
+ *   plan status   — 更新方案状态
+ *   plan search   — 搜索方案
+ *   plan index    — 重新生成 INDEX.md 索引文件
  */
 
 import { Command } from "commander";
@@ -15,19 +25,32 @@ import {
   regenerateIndex,
 } from "../lib/plan.js";
 
-/** Get vault root from parent command options */
+/**
+ * 从子命令的父级链中获取 vault 根目录路径
+ *
+ * commander 的命令层级结构：program → plan → create/show/...
+ * 通过 cmd.parent.parent 访问 program 级别的 --vault 选项
+ *
+ * @param cmd 当前子命令实例
+ * @returns vault 根目录路径
+ */
 function getVaultRoot(cmd: Command): string {
-  // cmd is the subcommand (e.g., plan create)
-  // cmd.parent is the plan command
-  // cmd.parent.parent is the program command with --vault option
   return cmd.parent?.parent?.opts()?.vault ?? process.env.OBSIDIAN_VAULT ?? process.cwd();
 }
 
+/**
+ * 创建并返回 plan 命令组
+ *
+ * 包含所有方案管理相关的子命令。每个子命令都通过
+ * getVaultRoot 获取 vault 路径，然后调用 lib/plan.js 中的核心函数。
+ *
+ * @returns Commander Command 实例
+ */
 export function planCommand(): Command {
   const plan = new Command("plan")
     .description("Manage living plan documents — persistent, versioned, searchable");
 
-  // ── plan create ─────────────────────────────────────────────────────────
+  // ── plan create：创建新方案文档 ──────────────────────────────────────
   plan
     .command("create")
     .description("Create a new plan document")
@@ -55,7 +78,7 @@ export function planCommand(): Command {
       }
     });
 
-  // ── plan show ───────────────────────────────────────────────────────────
+  // ── plan show：查看方案详情 ──────────────────────────────────────────
   plan
     .command("show")
     .description("Show plan details")
@@ -69,6 +92,7 @@ export function planCommand(): Command {
         return;
       }
 
+      // 打印方案的元数据和完整内容
       console.log(`\n📋 ${plan.title}`);
       console.log("═".repeat(50));
       console.log(`  Status:   ${plan.status}`);
@@ -82,7 +106,7 @@ export function planCommand(): Command {
       console.log(plan.content);
     });
 
-  // ── plan list ───────────────────────────────────────────────────────────
+  // ── plan list：列出所有方案 ──────────────────────────────────────────
   plan
     .command("list")
     .description("List all plan documents")
@@ -102,6 +126,7 @@ export function planCommand(): Command {
 
       console.log(`\n📋 Plans (${plans.length})\n`);
 
+      /** 状态对应的图标映射 */
       const statusIcons: Record<string, string> = {
         draft: "📝",
         active: "🌿",
@@ -118,7 +143,7 @@ export function planCommand(): Command {
       console.log("");
     });
 
-  // ── plan update ─────────────────────────────────────────────────────────
+  // ── plan update：更新方案章节内容 ────────────────────────────────────
   plan
     .command("update")
     .description("Update a section of a plan document")
@@ -126,6 +151,7 @@ export function planCommand(): Command {
     .option("-s, --section <name>", "Section to update (e.g., '方案设计')")
     .option("-c, --content <text>", "New content for the section")
     .action((title, opts, cmd) => {
+      // 校验必填参数
       if (!opts.section || !opts.content) {
         console.log("\n❌ Both --section and --content are required.");
         return;
@@ -141,7 +167,7 @@ export function planCommand(): Command {
       }
     });
 
-  // ── plan changelog ──────────────────────────────────────────────────────
+  // ── plan changelog：添加变更记录 ─────────────────────────────────────
   plan
     .command("changelog")
     .description("Add a changelog entry to a plan")
@@ -158,13 +184,14 @@ export function planCommand(): Command {
       }
     });
 
-  // ── plan status ─────────────────────────────────────────────────────────
+  // ── plan status：更新方案状态 ────────────────────────────────────────
   plan
     .command("status")
     .description("Update plan status")
     .argument("<title>", "Plan title (fuzzy match)")
     .argument("<new-status>", "New status (draft|active|completed|archived)")
     .action((title, newStatus, opts, cmd) => {
+      // 校验状态值合法性
       const validStatuses = ["draft", "active", "completed", "archived"];
       if (!validStatuses.includes(newStatus)) {
         console.log(`\n❌ Invalid status. Must be one of: ${validStatuses.join(", ")}`);
@@ -181,7 +208,7 @@ export function planCommand(): Command {
       }
     });
 
-  // ── plan search ─────────────────────────────────────────────────────────
+  // ── plan search：搜索方案 ────────────────────────────────────────────
   plan
     .command("search")
     .description("Search plans by keyword")
@@ -197,6 +224,7 @@ export function planCommand(): Command {
 
       console.log(`\n🔍 Search results for "${query}" (${results.length})\n`);
 
+      /** 状态对应的图标映射 */
       const statusIcons: Record<string, string> = {
         draft: "📝",
         active: "🌿",
@@ -212,7 +240,7 @@ export function planCommand(): Command {
       console.log("");
     });
 
-  // ── plan index ──────────────────────────────────────────────────────────
+  // ── plan index：重新生成 INDEX.md 索引 ───────────────────────────────
   plan
     .command("index")
     .description("Regenerate INDEX.md for all plans")
